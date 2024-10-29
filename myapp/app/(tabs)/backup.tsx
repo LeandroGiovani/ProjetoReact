@@ -46,15 +46,6 @@ export default function HomeScreen() {
           <View style={{ padding: 10 }}>
             <Image source={{ uri: item.imagem }} style={{ width: 200, height: 200 }} />
             <Text>{item.nome}</Text>
-            <Text>{item.bairro}</Text>
-            <Text>{item.descricao}</Text>
-            <Text>{item.tipo}</Text>
-            <Text>{item.finalidade}</Text>
-            <Text>{item.status}</Text>
-            <Text>{item.area_terreno}</Text>
-            <Text>{item.area_construida}</Text>
-            <Text>{item.valor_aluguel}</Text>
-            <Text>{item.valor_venda}</Text>
           </View>
         )}
         onEndReached={loadMoreItems}
