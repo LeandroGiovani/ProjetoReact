@@ -1,12 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import json
 
 app = FastAPI()
 
+# Configuração do CORS
 origins = ["http://localhost:8081", "http://127.0.0.1:8081"]
-  # Substitua por sua origem permitida
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -15,11 +15,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Definição dos modelos
 class ImovelCreate(BaseModel):
     nome: str
-    finalidade: tuple | None # alugar, comprar, permuta
-    tipo: str # Casa, terreno, Sala...
-    status: str # publicado, rascunho, lixo
+    finalidade: tuple | None  # alugar, comprar, permuta
+    tipo: str  # Casa, terreno, Sala...
+    status: str  # publicado, rascunho, lixo
     imagem: str
     descricao: str
     valor_aluguel: float
@@ -34,83 +35,89 @@ class ImovelRead(ImovelCreate):
 class Usuario(BaseModel):
     nome: str
     idade: int
+
 class UsuarioRead(Usuario):
     id: int
 
+# Classe CRUD para manuseio do arquivo JSON
 class CRUD:
-    caminho = "imoveis.json" # é possível usar crud.caminho = 'novo.json'
-    def __init__(self, modo) -> None:
+    caminho = "imoveis.json"
+
+    def __init__(self, modo):
         self.modo = modo
 
-    def set_nome(self, nome):
-        set.nome = nome
-
     def conexao(self, dados=None):
-        """
-            modo: '+r' para leitura
-            modo: '+w' para escrita
+        """ 
+        Modo: '+r' para leitura, '+w' para escrita 
         """
         with open(self.caminho, self.modo, encoding='utf8') as file:
-            if self.modo == '+w':
-                file.write(dados)
+            if self.modo == '+w' and dados is not None:
+                json.dump(dados, file)
             elif self.modo == '+r':
-                return file.read()
+                return json.load(file)
 
-class ImovelCRUD(ImovelRead):
-    def __init__(self):
-        pass
-
-
-@app.get('/imoveis') # , response_model=list[ImovelRead]
-async def lista_imoveis(skip: int = 0, limit: int = 100, finalidade=None, tipo=None, bairro=None, area_t_min=None, area_t_max=None, preco_v_min=None, preco_v_max=None, preco_l_min=None, preco_l_max=None):
+# Endpoint para listar imóveis com filtros
+@app.get('/imoveis')
+async def lista_imoveis(skip: int = 0, limit: int = 100, finalidade: str = None, tipo: str = None, bairro: str = None, area_t_min: float = None, area_t_max: float = None, preco_v_min: float = None, preco_v_max: float = None, preco_l_min: float = None, preco_l_max: float = None):
+    """ 
+    skip: número da paginação 
+    limit: número de itens por página 
     """
-        skip: número da paginação (Exemplo você vai consultar a pagina 1 de 10)
-        limit: número de itens por página (padrão é 100 mas pode ser alterado para 10-1000)
-    """
-    import json
-    crud = CRUD('+r') # conexao banco
+    crud = CRUD('+r')
     dados = crud.conexao()
-    dados = json.loads(dados)
-    if finalidade: # filtra por venda, locacao...
-        filtro = lambda item: item['finalidade'] in finalidade.upper()
-        dados = list(filter(filtro, dados))
-    
+
+    # Filtros de busca
+    if finalidade:
+        dados = [item for item in dados if finalidade.upper() in item['finalidade']]
     if tipo:
-        filtro = lambda item: item['tipo'] in tipo.upper()
-        dados = list(filter(filtro, dados))
+        dados = [item for item in dados if tipo.upper() == item['tipo'].upper()]
+    if bairro:
+        dados = [item for item in dados if bairro.upper() in item['bairro'].upper()]
+    if area_t_min is not None:
+        dados = [item for item in dados if float(item['area_terreno']) >= area_t_min]
+    if area_t_max is not None:
+        dados = [item for item in dados if float(item['area_terreno']) <= area_t_max]
+    if preco_v_min is not None:
+        dados = [item for item in dados if float(item['valor_venda']) >= preco_v_min]
+    if preco_v_max is not None:
+        dados = [item for item in dados if float(item['valor_venda']) <= preco_v_max]
+    if preco_l_min is not None:
+        dados = [item for item in dados if float(item['valor_aluguel']) >= preco_l_min]
+    if preco_l_max is not None:
+        dados = [item for item in dados if float(item['valor_aluguel']) <= preco_l_max]
 
-    if bairro: # bairro
-        filtro = lambda item: item['bairro'] in bairro.upper()
-        dados = list(filter(filtro, dados))
-
-    if area_t_min: # bairro
-        filtro = lambda item: float(item['area_terreno']) >= float(area_t_min)
-        dados = list(filter(filtro, dados))
-
-    if area_t_max: # bairro
-        filtro = lambda item: float(item['area_terreno']) <= float(area_t_max)
-        dados = list(filter(filtro, dados))
-
-    # Desenvolva os demais filtros seguindo o modelo
+    # Paginação
+    dados = dados[skip: skip + limit]
 
     return dados
 
+# Endpoint para obter todos os itens
 @app.get("/itens")
 async def obter_itens():
     crud = CRUD('+r')
     dados = crud.conexao()
     return dados
 
+# Endpoint para salvar um usuário
 @app.post("/usuarios")
 async def salvar_item(usuario: Usuario):
+    crud = CRUD('+r')
+    dados = crud.conexao()
+
     u = {
-        "id": len(dados)+1
-        ,"nome": usuario.nome
-        ,"idade": usuario.idade
+        "id": len(dados) + 1,
+        "nome": usuario.nome,
+        "idade": usuario.idade
     }
     dados.append(u)
+
+    # Salvar novo usuário no arquivo JSON
+    crud = CRUD('+w')
+    crud.conexao(dados)
+
     return {"mensagem": "Usuário criado com sucesso!", "id": u["id"]}
 
+# Inicialização do servidor
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
