@@ -17,36 +17,18 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Imóveis',
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name='favoritos'
         options={{
-          title: 'Explorar',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'code-slash' : 'code-slash-outline'} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name='imc'
-        options={{
-          title: 'Calculadora de IMC',
+          title: 'Favoritos',
           tabBarIcon: ({color, focused}) => (
-            <TabBarIcon name={focused ? 'calculator' : 'calculator-outline'} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name='cadastro'
-        options={{
-          title: 'Cadastro de Usuário',
-          tabBarIcon: ({color, focused}) => (
-            <TabBarIcon name={focused ? 'people' : 'people-outline'} color={color} />
+            <TabBarIcon name={focused ? 'star' : 'star-outline'} color={color} />
           ),
         }}
       />

@@ -1,9 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional, List
 import json
 
 app = FastAPI()
+
+FAVORITOS_PATH = "favoritos.json"
 
 # Configuração do CORS
 origins = ["http://localhost:8081", "http://127.0.0.1:8081"]
@@ -58,7 +61,19 @@ class CRUD:
 
 # Endpoint para listar imóveis com filtros
 @app.get('/imoveis')
-async def lista_imoveis(skip: int = 0, limit: int = 100, finalidade: str = None, tipo: str = None, bairro: str = None, area_t_min: float = None, area_t_max: float = None, preco_v_min: float = None, preco_v_max: float = None, preco_l_min: float = None, preco_l_max: float = None):
+async def lista_imoveis(
+    skip: int = 0, 
+    limit: int = 100, 
+    finalidade: str = None, 
+    tipo: str = None, 
+    bairro: str = None, 
+    area_t_min: float = None, 
+    area_t_max: float = None, 
+    preco_v_min: float = None, 
+    preco_v_max: float = None, 
+    preco_l_min: float = None, 
+    preco_l_max: float = None
+    ):
     """ 
     skip: número da paginação 
     limit: número de itens por página 
@@ -67,26 +82,43 @@ async def lista_imoveis(skip: int = 0, limit: int = 100, finalidade: str = None,
     dados = crud.conexao()
 
     # Filtros de busca
+        
     if finalidade:
-        dados = [item for item in dados if finalidade.upper() in item['finalidade']]
-    if tipo:
-        dados = [item for item in dados if tipo.upper() == item['tipo'].upper()]
-    if bairro:
-        dados = [item for item in dados if bairro.upper() in item['bairro'].upper()]
-    if area_t_min is not None:
-        dados = [item for item in dados if float(item['area_terreno']) >= area_t_min]
-    if area_t_max is not None:
-        dados = [item for item in dados if float(item['area_terreno']) <= area_t_max]
-    if preco_v_min is not None:
-        dados = [item for item in dados if float(item['valor_venda']) >= preco_v_min]
-    if preco_v_max is not None:
-        dados = [item for item in dados if float(item['valor_venda']) <= preco_v_max]
-    if preco_l_min is not None:
-        dados = [item for item in dados if float(item['valor_aluguel']) >= preco_l_min]
-    if preco_l_max is not None:
-        dados = [item for item in dados if float(item['valor_aluguel']) <= preco_l_max]
+        filtro = lambda item: item['finalidade'].upper() == finalidade.upper()  # Comparação exata
+        dados = list(filter(filtro, dados))
 
-    # Paginação
+    if tipo:
+        filtro = lambda item: item['tipo'].upper() == tipo.upper()  # Comparação exata
+        dados = list(filter(filtro, dados))
+
+    if bairro:
+        filtro = lambda item: item['bairro'].upper() == bairro.upper()  # Comparação exata
+        dados = list(filter(filtro, dados))
+
+    if area_t_min:
+        filtro = lambda item: float(item['area_terreno']) >= float(area_t_min)
+        dados = list(filter(filtro, dados))
+
+    if area_t_max:
+        filtro = lambda item: float(item['area_terreno']) <= float(area_t_max)
+        dados = list(filter(filtro, dados))
+        
+    if preco_v_min:
+        filtro = lambda item: float(item['valor_venda']) >= float(preco_v_min)
+        dados = list(filter(filtro, dados))
+
+    if preco_v_max:
+        filtro = lambda item: float(item['valor_venda']) <= float(preco_v_max)
+        dados = list(filter(filtro, dados))
+        
+    if preco_l_min:
+        filtro = lambda item: float(item['valor_aluguel']) >= float(preco_l_min)
+        dados = list(filter(filtro, dados))
+
+    if preco_l_max:
+        filtro = lambda item: float(item['valor_aluguel']) <= float(preco_l_max)
+        dados = list(filter(filtro, dados))
+
     dados = dados[skip: skip + limit]
 
     return dados
@@ -116,6 +148,47 @@ async def salvar_item(usuario: Usuario):
     crud.conexao(dados)
 
     return {"mensagem": "Usuário criado com sucesso!", "id": u["id"]}
+
+# Inicializa o arquivo favoritos.json se não existir
+try:
+    with open(FAVORITOS_PATH, "r") as f:
+        favoritos = json.load(f)
+except FileNotFoundError:
+    with open(FAVORITOS_PATH, "w") as f:
+        json.dump([], f)
+
+@app.post("/favoritos")
+async def add_favorito(imovel: dict):
+    with open(FAVORITOS_PATH, "r") as f:
+        favoritos = json.load(f)
+    # Evita duplicatas
+    if not any(fav["id"] == imovel["id"] for fav in favoritos):
+        favoritos.append(imovel)
+        with open(FAVORITOS_PATH, "w") as f:
+            json.dump(favoritos, f)
+    return {"message": "Imóvel favoritado com sucesso!"}
+
+@app.get("/favoritos")
+async def get_favoritos():
+    with open(FAVORITOS_PATH, "r") as f:
+        favoritos = json.load(f)
+    return favoritos
+
+@app.delete("/favoritos/{id}")
+async def delete_favorito(id: int):
+    with open(FAVORITOS_PATH, "r") as f:
+        favoritos = json.load(f)
+    # Encontra o favorito pelo ID
+    favorito = next((f for f in favoritos if f["id"] == id), None)
+    if not favorito:
+        raise HTTPException(status_code=404, detail="Favorito não encontrado")
+    # Remove o favorito da lista
+    favoritos = [f for f in favoritos if f["id"] != id]
+    # Salva as alterações no arquivo JSON
+    with open(FAVORITOS_PATH, "w") as f:
+        json.dump(favoritos, f, indent=4)
+    return {"message": "Favorito removido com sucesso"}
+
 
 # Inicialização do servidor
 if __name__ == "__main__":

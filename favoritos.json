@@ -1,0 +1,16 @@
+[
+    {
+        "id": 1,
+        "nome": "Ducimus consectetur inventore.",
+        "finalidade": "VENDA",
+        "tipo": "CASA",
+        "status": "LIXO",
+        "imagem": "https://cloudflare-ipfs.com/ipfs/Qmd3W5DuhgHirLHGVixi6V76LhCkZUz6pnFt5AJBiyvHye/avatar/575.jpg",
+        "descricao": "Quo aliquid laudantium temporibus magni. Saepe sunt dolorum repellendus est eum inventore quibusdam est. Ut veniam tempore occaecati quos.",
+        "valor_aluguel": "262615.94",
+        "valor_venda": "7880324.44",
+        "bairro": "Weimannmouth",
+        "area_terreno": "993.96",
+        "area_construida": "6458.52"
+    }
+]
